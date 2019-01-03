@@ -1,0 +1,68 @@
+---
+###############################################################################
+#
+# This will install the latest Docker CE
+#
+###############################################################################
+
+# sudo yum remove docker docker-ce docker-common docker-selinux docker-engine
+- name: for ess server, may need to remove below
+  yum:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+    - docker
+    - docker-ce
+    - docker-common
+    - docker-selinux
+    - docker-engine
+
+# sudo yum install docker-ce
+- name: yum install docker-ce
+  yum:
+    name: docker-ce
+    state: present
+    update_cache: yes
+
+# create a docker directory if it doesn't exist
+- file:
+    path: /etc/docker
+    state: directory
+    mode: 0755
+
+# generate the daemon.json file:
+# {
+#   "data-root": "{{ mount_point }}/docker",
+#   "storage-driver": "overlay"
+# }
+- name: generate the daemon.json file
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0644
+
+# usermod -aG docker developer
+- name: Add users to the Docker group
+  user:
+    name: developer
+    group: docker
+    append: yes
+
+# run docker daemon
+- name: Make sure a docker service is running
+  systemd:
+    state: started
+    name: docker
+
+# logout and login 
+- user: name={{ansible_user}} groups=docker
+- name: reset ssh connection to allow user changes to affect 'current login user'
+  meta: reset_connection
+
+# docker run --rm hello-world
+- name: test docker
+  become: no
+  shell: "docker run --rm hello-world"
+

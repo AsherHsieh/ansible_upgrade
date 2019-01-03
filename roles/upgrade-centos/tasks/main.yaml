@@ -1,0 +1,65 @@
+---
+###############################################################################
+#
+# CentOS upgrade kernel
+#
+###############################################################################
+
+# check ver. info with ansible module
+- debug:
+    msg: "Before upgrade the version is{{ ansible_distribution_version }}"
+
+# Back up the original yum.conf
+- name: Back up the original yum.conf
+  fetch:
+    dest: ./original/
+    src: /etc/yum.conf
+
+# disable exclude settings in /etc/yum.conf
+- name: modify the /etc/yum.conf
+  shell: "cat /etc/yum.conf | grep ibutils-libs* | grep -v '#exclude' "
+  register: result
+
+- lineinfile:
+    path: /etc/yum.conf
+    regexp: '^exclude=ibutils-libs'
+    line: '#{{  result.stdout }}'
+  when: result is succeeded
+
+# yum remove mpitests_openmpi openmpi libibverbs cuda*
+- name: for ess server, may need to remove below
+  yum:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+    - mpitests_openmpi
+    - openmpi
+    - libibverbs
+    - cuda*
+
+#  yum upgrade
+- name: upgrade all packages
+  yum:
+    name: '*'
+    state: latest
+
+# enable exclude in /etc/yum.conf
+- lineinfile:
+    path: /etc/yum.conf
+    regexp: '#exclude=ibutils-libs'
+    line: '{{  result.stdout }}'
+  when: result is succeeded
+
+# Back up the modified yum.conf
+- name: Back up the modified yum.conf
+  fetch:
+    dest: ./modified/
+    src: /etc/yum.conf
+
+# reboot
+- name: reboot ess server when upgradation finished
+  reboot:
+
+# check ver. info with ansible module
+- debug:
+    msg: "After upgrade the version is{{ ansible_distribution_version }}"

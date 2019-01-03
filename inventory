@@ -1,0 +1,31 @@
+[servers_s01]
+oss11 ansible_port=22
+oss14 ansible_port=22
+oss15 ansible_port=22
+oss16 ansible_port=22
+oss17 ansible_port=22
+oss18 ansible_port=22
+oss19 ansible_port=22
+oss20 ansible_port=22
+oss21 ansible_port=22
+oss22 ansible_port=22
+oss23 ansible_port=22
+oss24 ansible_port=22
+oss25 ansible_port=22
+oss26 ansible_port=22
+oss32 ansible_port=22
+oss37 ansible_port=22
+oss38 ansible_port=22
+oss39 ansible_port=22
+
+[servers_s01:vars]
+mount_point=/s01
+disk_partition=/dev/sda1
+
+[servers_d01]
+oss12 ansible_port=22
+oss13 ansible_port=22
+
+[servers_d01:vars]
+mount_point=/d01
+disk_partition=/dev/sda1

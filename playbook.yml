@@ -1,0 +1,14 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    ver: 7.3
+    users:
+      - developer
+  roles:
+    - role: format-xfs
+    - role: upgrade-centos
+      when: ansible_distribution_version is version(ver,"<")
+    - role: nvidia-cuda
+    - role: docker
+    - role: nvidia-docker
