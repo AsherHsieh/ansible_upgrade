@@ -5,11 +5,18 @@
 #
 ###############################################################################
 
-# yum remove cuda_packages
-- name: remove the cuda package
+# yum -y remove `yum list installed | grep '@cuda' | cut -d. -f1 | grep -v "^[ ]" | sed -e :a -e '$!N; s/\n/ /; ta'`
+- name: yum list packages
+  shell: yum list installed | grep '@cuda' | cut -d. -f1 | grep -v "^[ ]" | sed -e :a -e '$!N; s/\n/ /; ta'
+  register: yum_packages
+- debug:
+    msg: "{{ yum_packages.stdout }}"
+  ignore_errors: True
+
+# yum remove yum_packages
+- name: yum remove yum_packages
   yum:
-    autoremove: yes
-    name: '@cuda'
+    name: "{{ yum_packages.stdout }}"
     state: absent
 
 # copy the file to install path first
@@ -22,24 +29,17 @@
     mode: 0644
 
 # sudo rpm -i cuda-repo-rhel7-10-0-local-10.0.130-410.48-1.0-1.x86_64.rpm
-- name: install cuda rpm from a local file
+- name: install cuda rpm
   yum:
     name: /home/developer/cuda-repo-rhel7-10-0-local-10.0.130-410.48-1.0-1.x86_64.rpm
     state: present
 
 # sudo yum clean all
-- name: Remove repository (and clean up left-over metadata)
+- name: yum clean all
   yum_repository:
     name: epel
     state: absent
-  notify: yum-clean-metadata
   ignore_errors: True
-
-# Handler showing how to clean yum metadata cache
-- name: yum-clean-metadata
-  command: yum clean metadata
-  args:
-    warn: no
 
 # sudo yum install cuda
 - name: yum install cuda
@@ -49,52 +49,26 @@
     update_cache: yes
 
 # Back up the original /etc/profile.d/cuda.sh
-- name: Back up the original /etc/profile.d/cuda.sh
+- name: Back up cuda.sh
   fetch:
     dest: ./original/
     src: /etc/profile.d/cuda.sh
 
-# modify /etc/profile.d/cuda.sh as below:
-- name: test modify bin
-  shell: " cat /etc/profile.d/cuda.sh | grep 'cuda-7.5' | grep 'bin' | grep -v '#export' "
-  register: bin_result
-  ignore_errors: True
-
-- lineinfile:
-    path: /etc/profile.d/cuda.sh
-    regexp: '^export PATH'
-    line: '#{{  bin_result.stdout }}'
-  when: bin_result is succeeded
-
-- lineinfile:
-    path: /etc/profile.d/cuda.sh
-    insertafter: EOF
-    line: 'export PATH=/usr/local/cuda/bin:$PATH'
-  when: bin_result is succeeded
-
-- name: test modify lib
-  shell: " cat /etc/profile.d/cuda.sh | grep 'cuda-7.5' | grep 'lib' | grep -v '#export' "
-  register: lib_result
-  ignore_errors: True
-
-- lineinfile:
-    path: /etc/profile.d/cuda.sh
-    regexp: '^export LD_LIBRARY_PATH'
-    line: '#{{  lib_result.stdout }}'
-  when: lib_result is succeeded
-
-- lineinfile:
-    path: /etc/profile.d/cuda.sh
-    insertafter: EOF
-    line: 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH'
-  when: lib_result is succeeded
+# copy the public version of cuda.sh to target
+- name: copy cuda.sh
+  copy:
+    src: ./files/cuda.sh
+    dest: /etc/profile.d/cuda.sh
+    owner: root
+    group: root
+    mode: 0644
 
 # Back up the modified /etc/profile.d/cuda.sh
-- name: Back up the modified /etc/profile.d/cuda.sh
+- name: Back up cuda.sh
   fetch:
     dest: ./modified/
     src: /etc/profile.d/cuda.sh
 
-# reboot
-- name: reboot ess server when upgradation finished
+# reboot ess server when upgradation finished
+- name: reboot
   reboot:

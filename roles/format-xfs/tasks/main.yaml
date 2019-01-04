@@ -5,6 +5,13 @@
 #
 ###############################################################################
 
+# check disk partition
+- name: check disk partition
+  shell: "cat /proc/mounts | grep {{ vars.mount_point }} | grep 'ext4' | awk '{print $1}'"
+  register: disk_partition
+- debug:
+    msg: "{{ disk_partition.stdout }}"
+
 # umount the mount_point (s01 or d01)
 - name: umount the mount_point
   mount:
@@ -16,56 +23,57 @@
 - name: format to xfs File System
   filesystem:
     fstype: xfs
-    dev: "{{ vars.disk_partition }}"
+    dev: "{{ disk_partition.stdout }}"
     force: yes
     opts: "-s size=512 -i size=512,maxpct=0 -n ftype=1"
 
 # Back up the original fstab
-- name: Back up the original fstab
+- name: Back up
   fetch:
     dest: ./original/
     src: /etc/fstab
 
-# Modify /etc/fstab as below
-# /dev/sda1   /s01   xfs   inode64,noatime,logbufs=8,logbsize=256k 0 0
+# Modify the /etc/fstab
 - name: modify the /etc/fstab
-  shell: " cat /etc/fstab |grep ext4|grep {{ vars.mount_point }}|grep -v '#{{ vars.disk_partition }}' "
-  register: result
+  shell: " cat /etc/fstab |grep ext4|grep {{ vars.mount_point }}|grep -v '#{{ disk_partition.stdout }}' "
+  register: fstab_result
   ignore_errors: True
 
-- lineinfile:
+- name: comment the disk partition
+  lineinfile:
     path: /etc/fstab
-    regexp: '^{{ vars.disk_partition }}'
-    line: '#{{  result.stdout }}'
-  when: result is succeeded
+    regexp: '^{{ disk_partition.stdout }}'
+    line: '#{{  fstab_result.stdout }}'
+  when: fstab_result is succeeded
 
-- lineinfile:
+- name: add new disk partition
+  lineinfile:
     path: /etc/fstab
     insertafter: EOF
-    line: '{{ vars.disk_partition }}   {{ vars.mount_point }}   xfs   inode64,noatime,logbufs=8,logbsize=256k 0 0'
-  when: result is succeeded
+    line: '{{ disk_partition.stdout }}   {{ vars.mount_point }}   xfs   inode64,noatime,logbufs=8,logbsize=256k 0 0'
+  when: fstab_result is succeeded
 
 ##### if there is something wrong happened #####
 - name: rollback the original fstab
   copy:
     src: ./original/{{ ansible_host }}/etc/fstab
     dest: /etc/fstab
-  when: result is failed
+  when: fstab_result is failed
 
 - name: format back to ext4 file system
   filesystem:
     fstype: ext4
-    dev: "{{ vars.disk_partition }}"
+    dev: "{{ disk_partition.stdout }}"
     force: yes
-  when: result is failed
+  when: fstab_result is failed
 
 - name: mount back to mount_point
   mount:
-    src: "{{ vars.disk_partition }}"
+    src: "{{ disk_partition.stdout }}"
     path: "{{ vars.mount_point }}"
     fstype: ext4
     state: mounted
-  when: result is failed
+  when: fstab_result is failed
 ################################################
 
 # Back up the modified fstab
@@ -73,16 +81,16 @@
   fetch:
     dest: ./modified/
     src: /etc/fstab
-  when: result is succeeded
+  when: fstab_result is succeeded
 
 # Mount back
 - name: mount back to mount_point
   mount:
-    src: "{{ vars.disk_partition }}"
+    src: "{{ disk_partition.stdout }}"
     path: "{{ vars.mount_point }}"
     fstype: xfs
     state: mounted
-  when: result is succeeded
+  when: fstab_result is succeeded
 
 # use xfs_info check mount_point
 - name: use xfs_info check mount_point

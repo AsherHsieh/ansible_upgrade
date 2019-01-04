@@ -6,8 +6,7 @@
 ###############################################################################
 
 # If you have nvidia-docker 1.0 installed: we need to remove it and all existing GPU containers
-# docker volume ls -q -f driver=nvidia-docker | xargs -r -I{} -n1 docker ps -q -a -f volume={} | xargs -r docker rm -f
-- name: remove all existing GPU containers
+- name: remove existing GPU containers
   shell: "docker volume ls -q -f driver=nvidia-docker | xargs -r -I{} -n1 docker ps -q -a -f volume={} | xargs -r docker rm -f"
 
 # sudo yum remove nvidia-docker
@@ -17,35 +16,32 @@
     state: absent
 
 # Add the package repositories
-# curl -s -L https://nvidia.github.io/nvidia-docker/centos7/x86_64/nvidia-docker.repo | sudo tee /etc/yum.repos.d/nvidia-docker.repo
 - name: copy /etc/yum.repos.d/nvidia-docker.repo
   shell: "curl -s -L https://nvidia.github.io/nvidia-docker/centos7/x86_64/nvidia-docker.repo | sudo tee /etc/yum.repos.d/nvidia-docker.repo"
 
 # Install nvidia-docker2 and reload the Docker daemon configuration
-# sudo yum install -y nvidia-docker2
-- name: yum install -y nvidia-docker2
+- name: yum install nvidia-docker2
   yum:
     name: nvidia-docker2
     state: present
     update_cache: yes
 
 # sudo pkill -SIGHUP dockerd
-- name: pkill -SIGHUP dockerd
+- name: kill dockerd
   shell: "pkill -SIGHUP dockerd"
 
 # Test nvidia-smi with the latest official CUDA image
-# docker run --runtime=nvidia --rm nvidia/cuda:10.0-base nvidia-smi
-- name: remove all existing GPU containers
+- name: test GPU containers
   shell: "docker run --runtime=nvidia --rm nvidia/cuda:10.0-base nvidia-smi"
 
 # Back up the original /etc/docker/daemon.json
-- name: Back up the original /etc/docker/daemon.json
+- name: Back up daemon.json
   fetch:
     dest: ./original/
     src: /etc/docker/daemon.json
 
 # # (!!) above will override /etc/docker/daemon.json, need to reconfigure (e.g. storage driver, data-root)!
-- name: reconfigure the daemon.json file
+- name: reconfigure daemon.json
   template:
     src: daemon.json.j2
     dest: /etc/docker/daemon.json
@@ -53,14 +49,14 @@
     group: root
     mode: 0644
 
-# restart docker daemon
-- name: Make sure a docker service is running
+# Make sure a docker service is running
+- name: restart docker daemon
   systemd:
     state: restarted
     name: docker
 
 # Back up the modified /etc/docker/daemon.json
-- name: Back up the modified /etc/docker/daemon.json
+- name: Back up daemon.json
   fetch:
     dest: ./modified/
     src: /etc/docker/daemon.json
