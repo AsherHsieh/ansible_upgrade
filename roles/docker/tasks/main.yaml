@@ -6,23 +6,33 @@
 ###############################################################################
 
 # sudo yum remove docker docker-ce docker-common docker-selinux docker-engine
-- name: remove docker packages
+- name: uninstall old version
   yum:
-    name: "{{ item }}"
+    name:
+      - docker
+      - docker-ce
+      - docker-common
+      - docker-selinux
+      - docker-engine
     state: absent
-  with_items:
-    - docker
-    - docker-ce
-    - docker-common
-    - docker-selinux
-    - docker-engine
 
-# sudo yum install docker-ce
-- name: yum install docker-ce
+# Install required packages
+- name: install required packages
   yum:
-    name: docker-ce
-    state: present
-    update_cache: yes
+    name:
+      - yum-utils
+      - device-mapper-persistent-data
+      - lvm2
+    state: latest
+
+# set up the stable repository
+- name: set stable repository
+  shell: yum-config-manager -y --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  ignore_errors: yes
+
+# sudo yum install docker-ce 17.03.2
+- name: yum install docker-ce-17.03.2
+  shell: yum -y install --setopt=obsoletes=0 {{ docker_ce_ver }} {{ docker_ce_selinux_ver }}
 
 # create a docker directory if it doesn't exist
 - file:
@@ -49,12 +59,9 @@
     name: developer
     group: docker
     append: yes
+  notify: run docker daemon
 
-# Make sure a docker service is running
-- name: run docker daemon
-  systemd:
-    state: started
-    name: docker
+- meta: flush_handlers
 
 # logout and login 
 - user: name={{ansible_user}} groups=docker
@@ -65,3 +72,35 @@
 - name: test docker
   become: no
   shell: "docker run --rm hello-world"
+
+# Sonatype Nexus Installation
+# http://ess-repos01.wisers.com:9980/Document/Setup/blob/master/sonatype-nexus.md
+# sudo mkdir -p /etc/docker/certs.d/ess-repos01.wisers.com:8888/
+# sudo mkdir -p /etc/docker/certs.d/ess-repos01.wisers.com:8889/
+
+# create a directory if it doesn't exist
+- file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  with_items:
+    - /etc/docker/certs.d/ess-repos01.wisers.com:8888
+    - /etc/docker/certs.d/ess-repos01.wisers.com:8889
+
+# sudo rsync -av ess39:/etc/docker/certs.d/ess-repos01.wisers.com:8888/ca.crt /etc/docker/certs.d/ess-repos01.wisers.com:8888/
+# sudo rsync -av ess39:/etc/docker/certs.d/ess-repos01.wisers.com:8888/ca.crt /etc/docker/certs.d/ess-repos01.wisers.com:8889/
+- name: copy ca.crt
+  copy:
+    src: ./files/ca.crt
+    dest: "{{ item }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - /etc/docker/certs.d/ess-repos01.wisers.com:8888
+    - /etc/docker/certs.d/ess-repos01.wisers.com:8889
+
+# docker run --rm hello-world
+- name: test docker
+  become: no
+  shell: "docker run --rm ess-repos01.wisers.com:8888/hello-world"

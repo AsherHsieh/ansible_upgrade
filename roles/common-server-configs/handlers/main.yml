@@ -1,0 +1,5 @@
+---
+
+# reload the config file
+- name: reload config
+  command: sysctl -p

@@ -12,13 +12,15 @@
 # Back up the original yum.conf
 - name: Back up yum.conf
   fetch:
-    dest: ./original/
+    dest: ./backup/upgrade-centos/original/
     src: /etc/yum.conf
+  when: ansible_distribution_version is version(centos_ver,"<")
 
 # disable exclude settings in /etc/yum.conf
 - name: modify the /etc/yum.conf
   shell: "cat /etc/yum.conf | grep centos-release* | grep exclude"
   register: yum_result
+  when: ansible_distribution_version is version(centos_ver,"<")
 
 - name: comment exclude line
   lineinfile:
@@ -30,19 +32,45 @@
 # yum remove mpitests_openmpi openmpi libibverbs cuda*
 - name: yum remove packages
   yum:
-    name: "{{ item }}"
+    name:
+      - mpitests_openmpi
+      - openmpi
+      - libibverbs
+      - cuda*
     state: absent
-  with_items:
-    - mpitests_openmpi
-    - openmpi
-    - libibverbs
-    - cuda*
+  when: ansible_distribution_version is version(centos_ver,"<")
+
+# backup /etc/yum.repos.d/CentOS-Base.repo
+- name: backup /etc/yum.repos.d/CentOS-Base.repo
+  fetch:
+    dest: ./backup/upgrade-centos/original/
+    src: /etc/yum.repos.d/CentOS-Base.repo
+  when: ansible_distribution_version is version(centos_ver,"<")
+
+# change repo file
+- name: modify the CentOS-Base.repo
+  shell: sed -e '/mirrorlist=.*/d' -e 's/#baseurl=/baseurl=/' -e "s/\$releasever/7.5.1804/g" -e "s/mirror.centos.org\\/centos/vault.centos.org/g" -i CentOS-Base.repo
+  args:
+    chdir: /etc/yum.repos.d
+  when: ansible_distribution_version is version(centos_ver,"<")
+
+# Back up the modified CentOS-Base.repo
+- name: Back up CentOS-Base.repo
+  fetch:
+    dest: ./backup/upgrade-centos/modified/
+    src: /etc/yum.repos.d/CentOS-Base.repo
+
+# sudo yum clean all
+- name: yum clean all
+  command: yum clean all
+  ignore_errors: True
+  when: ansible_distribution_version is version(centos_ver,"<")
 
 #  yum upgrade all
 - name: upgrade all packages
-  yum:
-    name: '*'
-    state: latest
+  command: yum -y update
+  ignore_errors: True
+  when: ansible_distribution_version is version(centos_ver,"<")
 
 # enable exclude in /etc/yum.conf
 - name: enable exclude line
@@ -55,12 +83,11 @@
 # Back up the modified yum.conf
 - name: Back up yum.conf
   fetch:
-    dest: ./modified/
+    dest: ./backup/upgrade-centos/modified/
     src: /etc/yum.conf
+  notify: reboot
 
-# reboot
-- name: reboot
-  reboot:
+- meta: flush_handlers
 
 # check ver. info with ansible module
 - debug:

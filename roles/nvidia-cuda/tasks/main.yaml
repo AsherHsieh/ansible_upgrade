@@ -36,9 +36,7 @@
 
 # sudo yum clean all
 - name: yum clean all
-  yum_repository:
-    name: epel
-    state: absent
+  command: yum clean all
   ignore_errors: True
 
 # sudo yum install cuda
@@ -51,7 +49,7 @@
 # Back up the original /etc/profile.d/cuda.sh
 - name: Back up cuda.sh
   fetch:
-    dest: ./original/
+    dest: ./backup/nvidia-cuda/original/
     src: /etc/profile.d/cuda.sh
 
 # copy the public version of cuda.sh to target
@@ -66,9 +64,8 @@
 # Back up the modified /etc/profile.d/cuda.sh
 - name: Back up cuda.sh
   fetch:
-    dest: ./modified/
+    dest: ./backup/nvidia-cuda/modified/
     src: /etc/profile.d/cuda.sh
+  notify: reboot
 
-# reboot ess server when upgradation finished
-- name: reboot
-  reboot:
+- meta: flush_handlers

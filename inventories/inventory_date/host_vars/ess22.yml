@@ -1,0 +1,8 @@
+---
+# Define how many roles need to be implemented
+
+FormatXfsEnabled: true
+UpgradeCentosEnabled: true
+NvidiaCudaEnabled: true
+DockerEnabled: true
+NvidiaDockerEnabled: true

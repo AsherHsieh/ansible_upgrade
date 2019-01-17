@@ -1,0 +1,14 @@
+---
+- hosts: all
+  become: yes
+  roles:
+    - role: format-xfs
+      when: FormatXfsEnabled
+    - role: upgrade-centos
+      when: UpgradeCentosEnabled
+    - role: nvidia-cuda
+      when: NvidiaCudaEnabled
+    - role: docker
+      when: DockerEnabled
+    - role: nvidia-docker
+      when: NvidiaDockerEnabled

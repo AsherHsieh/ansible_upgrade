@@ -1,0 +1,4 @@
+	- name: common-server-configs
+	- purpose: apply different common configurations to ess servers, e.g.:
+		- configure the ulimit value
+		- (already applied) disable firewall service

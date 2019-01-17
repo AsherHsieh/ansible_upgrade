@@ -1,0 +1,7 @@
+---
+
+# Make sure a docker service is running
+- name: restart docker daemon
+  systemd:
+    state: restarted
+    name: docker

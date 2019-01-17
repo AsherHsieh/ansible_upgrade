@@ -1,0 +1,66 @@
+---
+###############################################################################
+#
+# common server configs
+#
+###############################################################################
+
+# Back up the original sysctl.conf
+- name: Back up sysctl.conf
+  fetch:
+    dest: ./backup/common-server-configs/original/
+    src: /etc/sysctl.conf
+
+# modify fs.file-max = 1000000
+- name: modify fs.file-max
+  lineinfile:
+    path: /etc/sysctl.conf
+    insertafter: EOF
+    line: 'fs.file-max = 1000000'
+
+# Back up the modified sysctl.conf
+- name: Back up the modified sysctl.conf
+  fetch:
+    dest: ./backup/common-server-configs/modified/
+    src: /etc/sysctl.conf
+
+# Back up the original /etc/security/limits.conf
+- name: Back up limits.conf
+  fetch:
+    dest: ./backup/common-server-configs/original/
+    src: /etc/security/limits.conf
+
+# modify the limits.conf
+- name: modify the limits.conf
+  lineinfile:
+    dest: /etc/security/limits.conf
+    line: "{{ item }}"
+    insertbefore: '# End of file'
+  with_items:
+    - "* soft nproc 655360"
+    - "* hard nproc 655360"
+    - "* soft nofile 655360"
+    - "* hard nofile 655360"
+
+# Back up the modified limits.conf
+- name: Back up the modified limits.conf
+  fetch:
+    dest: ./backup/common-server-configs/modified/
+    src: /etc/security/limits.conf
+  notify: reload config
+
+- meta: flush_handlers
+
+# logout and login
+- user: name={{ansible_user}}
+- name: reset ssh connection
+  meta: reset_connection
+
+# check the config
+- name: check the config
+  shell: ulimit -an|grep -E 'open files|max user processes'
+  register: ulimit_result
+
+- debug:
+    msg: "the ulimit after changing is {{ ulimit_result.stdout }}"
+  when: ulimit_result is succeeded

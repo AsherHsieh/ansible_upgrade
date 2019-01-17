@@ -19,12 +19,9 @@
 - name: copy /etc/yum.repos.d/nvidia-docker.repo
   shell: "curl -s -L https://nvidia.github.io/nvidia-docker/centos7/x86_64/nvidia-docker.repo | sudo tee /etc/yum.repos.d/nvidia-docker.repo"
 
-# Install nvidia-docker2 and reload the Docker daemon configuration
+# Install nvidia-docker2
 - name: yum install nvidia-docker2
-  yum:
-    name: nvidia-docker2
-    state: present
-    update_cache: yes
+  shell: yum install -y nvidia-docker2-2.0.3-1.docker17.03.2.ce.noarch nvidia-container-runtime-2.0.0-1.docker17.03.2.x86_64
 
 # sudo pkill -SIGHUP dockerd
 - name: kill dockerd
@@ -37,7 +34,7 @@
 # Back up the original /etc/docker/daemon.json
 - name: Back up daemon.json
   fetch:
-    dest: ./original/
+    dest: ./backup/nvidia-docker/original/
     src: /etc/docker/daemon.json
 
 # # (!!) above will override /etc/docker/daemon.json, need to reconfigure (e.g. storage driver, data-root)!
@@ -48,15 +45,12 @@
     owner: root
     group: root
     mode: 0644
+  notify: restart docker daemon
 
-# Make sure a docker service is running
-- name: restart docker daemon
-  systemd:
-    state: restarted
-    name: docker
+- meta: flush_handlers
 
 # Back up the modified /etc/docker/daemon.json
 - name: Back up daemon.json
   fetch:
-    dest: ./modified/
+    dest: ./backup/nvidia-docker/modified/
     src: /etc/docker/daemon.json
