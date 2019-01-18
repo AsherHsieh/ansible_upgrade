@@ -28,7 +28,6 @@
 # set up the stable repository
 - name: set stable repository
   shell: yum-config-manager -y --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-  ignore_errors: yes
 
 # sudo yum install docker-ce 17.03.2
 - name: yum install docker-ce-17.03.2
@@ -42,7 +41,7 @@
 
 # generate the daemon.json file:
 # {
-#   "data-root": "{{ mount_point }}/docker",
+#   "graph": "{{ mount_point }}/docker",
 #   "storage-driver": "overlay"
 # }
 - name: generate the daemon.json
@@ -72,35 +71,3 @@
 - name: test docker
   become: no
   shell: "docker run --rm hello-world"
-
-# Sonatype Nexus Installation
-# http://ess-repos01.wisers.com:9980/Document/Setup/blob/master/sonatype-nexus.md
-# sudo mkdir -p /etc/docker/certs.d/ess-repos01.wisers.com:8888/
-# sudo mkdir -p /etc/docker/certs.d/ess-repos01.wisers.com:8889/
-
-# create a directory if it doesn't exist
-- file:
-    path: "{{ item }}"
-    state: directory
-    mode: 0755
-  with_items:
-    - /etc/docker/certs.d/ess-repos01.wisers.com:8888
-    - /etc/docker/certs.d/ess-repos01.wisers.com:8889
-
-# sudo rsync -av ess39:/etc/docker/certs.d/ess-repos01.wisers.com:8888/ca.crt /etc/docker/certs.d/ess-repos01.wisers.com:8888/
-# sudo rsync -av ess39:/etc/docker/certs.d/ess-repos01.wisers.com:8888/ca.crt /etc/docker/certs.d/ess-repos01.wisers.com:8889/
-- name: copy ca.crt
-  copy:
-    src: ./files/ca.crt
-    dest: "{{ item }}"
-    owner: root
-    group: root
-    mode: 0644
-  with_items:
-    - /etc/docker/certs.d/ess-repos01.wisers.com:8888
-    - /etc/docker/certs.d/ess-repos01.wisers.com:8889
-
-# docker run --rm hello-world
-- name: test docker
-  become: no
-  shell: "docker run --rm ess-repos01.wisers.com:8888/hello-world"

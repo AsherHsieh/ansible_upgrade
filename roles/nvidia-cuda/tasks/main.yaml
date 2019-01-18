@@ -69,3 +69,9 @@
   notify: reboot
 
 - meta: flush_handlers
+
+# delete the cuda-repo-rhel7-10-0-local-10.0.130-410.48-1.0-1.x86_64.rpm
+- name: delete the cuda rpm
+  file:
+    path: /home/developer/cuda-repo-rhel7-10-0-local-10.0.130-410.48-1.0-1.x86_64.rpm
+    state: absent

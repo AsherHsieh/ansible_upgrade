@@ -9,3 +9,6 @@ centos_ver: 7.5
 
 docker_ce_ver: docker-ce-17.03.2.ce
 docker_ce_selinux_ver: docker-ce-selinux-17.03.2.ce
+
+docker_public:
+docker_ess:
