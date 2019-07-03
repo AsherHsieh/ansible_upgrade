@@ -28,6 +28,15 @@
     group: developer
     mode: 0644
 
+# copy the run-file to install path first
+- name: copy cuda run-file
+  copy:
+    src: ./files/cuda_10.0.130_410.48_linux.run
+    dest: /home/developer/cuda_10.0.130_410.48_linux.run
+    owner: developer
+    group: developer
+    mode: 0644
+
 # sudo rpm -i cuda-repo-rhel7-10-0-local-10.0.130-410.48-1.0-1.x86_64.rpm
 - name: install cuda rpm
   yum:
@@ -39,12 +48,15 @@
   command: yum clean all
   ignore_errors: True
 
+- pause:
+    prompt: "Install cuda package manually..."
+
 # sudo yum install cuda
-- name: yum install cuda
-  yum:
-    name: cuda
-    state: latest
-    update_cache: yes
+#- name: yum install cuda
+#  yum:
+#    name: cuda
+#    state: latest
+#    update_cache: yes
 
 # Back up the original /etc/profile.d/cuda.sh
 - name: Back up cuda.sh
@@ -75,3 +87,10 @@
   file:
     path: /home/developer/cuda-repo-rhel7-10-0-local-10.0.130-410.48-1.0-1.x86_64.rpm
     state: absent
+
+# delete the cuda_10.0.130_410.48_linux.run
+- name: delete the cuda run file
+  file:
+    path: /home/developer/cuda_10.0.130_410.48_linux.run
+    state: absent
+

@@ -21,6 +21,7 @@
   shell: "cat /etc/yum.conf | grep centos-release* | grep exclude"
   register: yum_result
   when: ansible_distribution_version is version(centos_ver,"<")
+  ignore_errors: True
 
 - name: comment exclude line
   lineinfile:
@@ -79,6 +80,12 @@
     regexp: '#exclude'
     line: '{{  yum_result.stdout }}'
   when: yum_result is succeeded
+
+# Back up the log of yum update
+- name: Back up yum.log
+  fetch:
+    dest: ./backup/upgrade-centos/modified/
+    src: /var/log/yum.log
 
 # Back up the modified yum.conf
 - name: Back up yum.conf

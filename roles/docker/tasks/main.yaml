@@ -5,16 +5,51 @@
 #
 ###############################################################################
 
+# record Docker version
+- name: record Docker version
+  shell: "docker --version"
+  register: docker_result
+- debug:
+    msg: "Before upgrading: {{ docker_result }}"
+
+# systemctl stop docker
+- name: stop docker
+  shell: "systemctl stop docker"
+
 # sudo yum remove docker docker-ce docker-common docker-selinux docker-engine
 - name: uninstall old version
   yum:
     name:
       - docker
-      - docker-ce
+      - docker-client
+      - docker-client-latest
       - docker-common
-      - docker-selinux
+      - docker-latest
+      - docker-latest-logrotate
+      - docker-logrotate
       - docker-engine
+      - docker-ce
+      - docker-selinux
     state: absent
+
+# double check if there are some packages do not be removed
+- name: list yum installed packages
+  shell: yum list installed|grep docker
+  register: grep_out
+- debug:
+    msg: "{{ grep_out.stdout }}"
+
+- pause:
+    prompt: "check if there are some docker packages ..."
+
+# Uninstall Docker CE: To delete all images, containers, and volumes.
+- name: removing /var/lib/docker and /mount_point/docker
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /var/lib/docker
+    - "{{ mount_point }}/docker"
 
 # Install required packages
 - name: install required packages
@@ -71,3 +106,41 @@
 - name: test docker
   become: no
   shell: "docker run --rm hello-world"
+
+# create a directory if it doesn't exist
+- file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  with_items:
+    - /etc/docker/certs.d/{{ docker_public }}
+    - /etc/docker/certs.d/{{ docker_ess }}
+
+- name: copy ca.crt
+  copy:
+    src: ./files/ca.crt
+    dest: "{{ item }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - /etc/docker/certs.d/{{ docker_public }}
+    - /etc/docker/certs.d/{{ docker_ess }}
+
+# pip install pexpect
+- name: pip install pexpect
+  pip:
+    name: pexpect
+
+# Login to registry and simple verification
+- name: Login to registry
+  expect:
+    command: docker login "{{ item }}"
+    responses:
+      Username: 'developer'
+      Password: 'developer'
+    echo: yes
+  with_items:
+    - "{{ docker_public }}"
+    - "{{ docker_ess }}"
+
