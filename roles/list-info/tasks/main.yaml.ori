@@ -1,0 +1,39 @@
+---
+###############################################################################
+#
+# CentOS upgrade kernel
+#
+###############################################################################
+
+# check ver. info with ansible module
+- debug:
+    msg: "Before upgrade the version is{{ ansible_distribution_version }}"
+
+# record mount point
+- name: record mount point
+  shell: egrep "^/dev/sda*" /etc/fstab
+  register: mount_result
+- debug:
+    msg: "Before upgrading: {{ mount_result }}"
+
+# record Docker version
+- name: record Docker version
+  shell: "docker --version"
+  register: docker_result
+- debug:
+    msg: "Before upgrading: {{ docker_result }}"
+
+# record cuda version
+- name: get cuda command
+  become: no
+  shell: "nvcc --version|grep release"
+  register: cuda_result
+- debug:
+    msg: "Before upgrading: {{ cuda_result }}"
+
+# record nvidia driver version
+- name: record nvidia driver version
+  shell: /usr/bin/nvidia-smi|grep -i driver
+  register: nvidia_result
+- debug:
+    msg: "Before upgrading: {{ nvidia_result }}"

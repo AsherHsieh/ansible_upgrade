@@ -1,0 +1,53 @@
+---
+###############################################################################
+#
+# CentOS upgrade kernel
+#
+###############################################################################
+
+# check ver. info with ansible module
+- debug:
+    msg: "Before upgrade the version is{{ ansible_distribution_version }}"
+
+# record mount point
+- name: record mount point
+  shell: egrep "^/dev/sda*" /etc/fstab
+  register: mount_result
+- debug:
+    msg: "Before upgrading: {{ mount_result.stdout }}"
+
+# record Docker version
+- name: record Docker version
+  shell: "docker --version"
+  register: docker_result
+- debug:
+    msg: "Before upgrading: {{ docker_result.stdout }}"
+
+# record cuda version
+- name: get cuda command
+  become: no
+  shell: "nvcc --version|grep release"
+  register: cuda_result
+- debug:
+    msg: "Before upgrading: {{ cuda_result.stdout }}"
+
+# record nvidia driver version
+- name: record nvidia driver version
+  shell: /usr/bin/nvidia-smi|grep -i driver
+  register: nvidia_result
+- debug:
+    msg: "Before upgrading: {{ nvidia_result.stdout }}"
+
+# Listing packages in Yum that depend on another installed package
+- name: list packages that depend on "libibverbs" package
+  shell: repoquery -q --installed --whatrequires libibverbs
+  register: repoquery_result
+- debug:
+    msg: "Before upgrading: {{ repoquery_result.stdout }}"
+
+- name: list packages that depend on "cuda*" package
+  shell: repoquery -q --installed --whatrequires cuda*
+  register: repoquery_result
+- debug:
+    msg: "Before upgrading: {{ repoquery_result.stdout }}"
+

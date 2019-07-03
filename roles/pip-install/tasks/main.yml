@@ -1,0 +1,20 @@
+---
+###############################################################################
+##
+## pip install on host
+##
+################################################################################
+
+# get pip install script
+- name: get pip python file
+  shell: curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+
+# install pip
+- name: install pip
+  shell: python get-pip.py
+
+# remove install file
+- name: remove install file
+  file:
+    path: ./get-pip.py
+    state: absent
