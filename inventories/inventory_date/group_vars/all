@@ -1,7 +1,7 @@
 ---
 # Variables listed here are applicable to all host groups
 ansible_port: 22
-ansible_user: developer
+ansible_user: developer #working account
 
 mount_point: /s01
 
@@ -10,5 +10,5 @@ centos_ver: 7.5
 docker_ce_ver: docker-ce-17.03.2.ce
 docker_ce_selinux_ver: docker-ce-selinux-17.03.2.ce
 
-docker_public:
+docker_public: #docker repository
 docker_ess:
